@@ -19,6 +19,9 @@ class UALSensors(Enum):
     UAL_1 = "ual-1"
     UAL_2 = "ual-2"
     UAL_3 = "ual-3"
+    UAL_4 = "ual-4"
+    UAL_5 = "ual-5"
+    UAL_6 = "ual-6"
 
 
 class SensorSource:
