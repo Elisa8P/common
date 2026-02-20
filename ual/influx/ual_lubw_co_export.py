@@ -105,7 +105,7 @@ def fetch_hourly_ual_lubw(
     join_how: str = "inner",
     output_csv_path: str = "hourly_ual_lubw.csv",
 ) -> pd.DataFrame:
-    ual_fields = ual_fields or ["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp"]
+    ual_fields = ual_fields or ["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp", "sht_humid"]
     lubw_fields = lubw_fields or ["CO", "TEMP"]
     ual_rename = ual_rename or {}
     lubw_rename = lubw_rename or {}
@@ -174,7 +174,7 @@ def fetch_hourly_ual_lubw_debug(
     lubw_csv_path: str = "hourly_lubw_only.csv",
     joined_csv_path: str = "hourly_ual_lubw.csv",
 ) -> pd.DataFrame:
-    ual_fields = ual_fields or ["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp"]
+    ual_fields = ual_fields or ["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp", "sht_humid"]
     lubw_fields = lubw_fields or ["CO", "TEMP"]
     ual_rename = ual_rename or {}
     lubw_rename = lubw_rename or {}
@@ -232,6 +232,39 @@ def fetch_hourly_ual_lubw_debug(
     return joined_df
 
 
+def fetch_hourly_source(
+    url: str,
+    token: str,
+    organization: str,
+    start: str,
+    stop: str,
+    bucket: str,
+    measurement: str,
+    topic: str,
+    fields: list[str],
+    rename_map: dict[str, str] | None = None,
+    aggregate_every: str = "1h",
+    output_csv_path: str | None = None,
+) -> pd.DataFrame:
+    rename_map = rename_map or {}
+
+    connector = InfluxDBConnector(url, token, organization)
+    query = build_hourly_source_query(
+        start=start,
+        stop=stop,
+        bucket=bucket,
+        measurement=measurement,
+        topic=topic,
+        fields=fields,
+        rename_map=rename_map,
+        aggregate_every=aggregate_every,
+    )
+    df = _clean_query_df_with_rename(connector.query_api.query_data_frame(query), rename_map=rename_map)
+    if output_csv_path:
+        df.to_csv(output_csv_path)
+    return df
+
+
 def build_co_hourly_join_query(
     start: str,
     stop: str,
@@ -250,7 +283,7 @@ ual = {build_hourly_source_query(
         bucket=ual_bucket,
         measurement="measurement_data",
         topic=f"sensors/measurement/{ual_sensor}",
-        fields=["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp"],
+        fields=["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp", "sht_humid"],
         rename_map={"CO": "CO_ual", "sht_temp": "UAL_TEMP"},
         aggregate_every="1h",
     )}
@@ -325,7 +358,7 @@ def fetch_co_hourly_ual_lubw(
         stop=stop,
         ual_sensor=ual_sensor,
         lubw_sensor=lubw_sensor,
-        ual_fields=["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp"],
+        ual_fields=["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp", "sht_humid"],
         lubw_fields=["CO", "TEMP"],
         ual_rename={"CO": "CO_ual", "sht_temp": "UAL_TEMP"},
         lubw_rename={"CO": "CO_lubw", "TEMP": "LUBW_TEMP"},
@@ -358,7 +391,7 @@ def fetch_co_hourly_ual_lubw_debug(
         stop=stop,
         ual_sensor=ual_sensor,
         lubw_sensor=lubw_sensor,
-        ual_fields=["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp"],
+        ual_fields=["CO", "RAW_ADC_CO_A", "RAW_ADC_CO_W", "sht_temp", "sht_humid"],
         lubw_fields=["CO", "TEMP"],
         ual_rename={"CO": "CO_ual", "sht_temp": "UAL_TEMP"},
         lubw_rename={"CO": "CO_lubw", "TEMP": "LUBW_TEMP"},
