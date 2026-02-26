@@ -69,17 +69,20 @@ def build_hourly_source_query(
     topic: str,
     fields: list[str],
     rename_map: dict[str, str] | None = None,
-    aggregate_every: str = "1h",
+    aggregate_every: str | None = "1h",
 ) -> str:
     rename_map = rename_map or {}
+
+    aggregate_clause = ""
+    if aggregate_every:
+        aggregate_clause = f"  |> aggregateWindow(every: {aggregate_every}, fn: mean, createEmpty: false)\n"
 
     return f"""
 from(bucket: "{bucket}")
   |> range(start: {start}, stop: {stop})
   |> filter(fn: (r) => r._measurement == "{measurement}" and r.topic == "{topic}")
   |> filter(fn: (r) => {_as_flux_or_filter(fields)})
-  |> aggregateWindow(every: {aggregate_every}, fn: mean, createEmpty: false)
-  |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+{aggregate_clause}  |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 """.strip()
 
 
@@ -101,7 +104,7 @@ def fetch_hourly_ual_lubw(
     lubw_fields: list[str] | None = None,
     ual_rename: dict[str, str] | None = None,
     lubw_rename: dict[str, str] | None = None,
-    aggregate_every: str = "1h",
+    aggregate_every: str | None = "1h",
     join_how: str = "inner",
     output_csv_path: str = "hourly_ual_lubw.csv",
 ) -> pd.DataFrame:
@@ -168,7 +171,7 @@ def fetch_hourly_ual_lubw_debug(
     lubw_fields: list[str] | None = None,
     ual_rename: dict[str, str] | None = None,
     lubw_rename: dict[str, str] | None = None,
-    aggregate_every: str = "1h",
+    aggregate_every: str | None = "1h",
     join_how: str = "inner",
     ual_csv_path: str = "hourly_ual_only.csv",
     lubw_csv_path: str = "hourly_lubw_only.csv",
@@ -243,7 +246,7 @@ def fetch_hourly_source(
     topic: str,
     fields: list[str],
     rename_map: dict[str, str] | None = None,
-    aggregate_every: str = "1h",
+    aggregate_every: str | None = "1h",
     output_csv_path: str | None = None,
 ) -> pd.DataFrame:
     rename_map = rename_map or {}
